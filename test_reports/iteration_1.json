@@ -1,0 +1,45 @@
+{
+  "summary": "HR-Go backend+frontend tested end-to-end against public preview URL. 60 pytest cases run: 58 passed (97%), 2 real backend bugs found (PATCH /vehicles/{id} and PATCH /routes/{id} require full body — return 422 on partial update). Frontend login + Owner dashboard + Driver flow (My Trips list, trip detail with Contact card CALL/WHATSAPP, Navigate, status workflow) all working. Role enforcement verified server-side: DRIVER→owner/users/customers/invoices/audit = 403, ADMIN→users/settings PATCH/template POST = 403. WhatsApp dynamic greeting (pagi/siang/malam) + driver name + vehicle verified. Invoice daily create, PATCH payment status with FINANCIAL audit, WhatsApp deep-link (phone+message+send_history append), PDF with ?token= all working. Templates versioning +1 on PATCH works. Admin audit-log category restriction verified (OPERATION/FINANCIAL/CONTACT only, no sensitive). No deprecated Expo packages (expo-av/barcode-scanner/background-fetch) detected. No react-native SafeAreaView misuse detected.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "PATCH /api/vehicles/{vid}", "issue": "Uses full VehicleIn schema — partial update like {\"status\":\"MAINTENANCE\"} returns 422 because name/plate are required. Should use a VehicleUpdateIn with Optional fields (same pattern as UpdateUserIn)."},
+      {"endpoint": "PATCH /api/routes/{rid}", "issue": "Uses full RouteIn schema — partial update like {\"base_price\":150000} returns 422 because name/origin/destination are required. Introduce RouteUpdateIn with Optional fields."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "login+dashboards", "issues": ["Clean, well-spaced; HR-Go branding + role tag + mobile tab bar (Overview/Operations/Users/More for owner, My Trips/History/Profile for driver) renders correctly on 390x844 viewport. Touch targets look >= 44pt."]}
+    ],
+    "react_native_issues": [
+      {"component": "RN deprecation warnings (non-blocking)", "issue": "Console warnings: 'shadow* style props are deprecated. Use boxShadow' and 'props.pointerEvents is deprecated. Use style.pointerEvents'. These originate from third-party libs (likely phosphor-react-native / expo-router) and will not break the app, but worth tracking for a future RN upgrade."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/conftest.py",
+    "/app/backend/tests/test_hrgo_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Fix PATCH /vehicles/{vid}: introduce VehicleUpdateIn Pydantic model with all-Optional fields; apply partial $set only on provided keys (same pattern as update_user).",
+    "Fix PATCH /routes/{rid}: introduce RouteUpdateIn with all-Optional fields and partial $set.",
+    "(Optional) Investigate and silence deprecated shadow*/pointerEvents RN warnings from upstream libs."
+  ],
+  "critical_code_review_comments": [
+    "server.py is ~1464 lines in a single file; consider splitting by domain (auth/users/trips/invoices/templates/audit) for maintainability — above 700-line guideline.",
+    "PATCH endpoints should always use Partial Update Models (Optional[...]); vehicles and routes currently reuse the create model, violating REST semantics and causing 422 on partial updates.",
+    "/api/invoices/{iid}/pdf accepts token via query string — fine for mobile WebView downloads, but ensure the token is not logged by reverse-proxy access logs."
+  ],
+  "updated_files": [
+    "/app/backend/tests/conftest.py (new)",
+    "/app/backend/tests/test_hrgo_api.py (new)"
+  ],
+  "success_rate": {"backend": "97% (58/60) — 2 real failures are the vehicles/routes PATCH bugs above", "frontend": "100% of flows tested (login→owner dashboard, login→driver trips→trip detail contact card) rendered and worked"},
+  "seed_data_creation": "Tests create TEST_* prefixed users, customers, vehicles, routes, trips, templates against the live preview DB. No cleanup implemented (preview-only). Prefixes allow easy identification/removal.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend tests at /app/backend/tests/test_hrgo_api.py are stable under pytest.ini's -n 2 --dist loadscope (classes pinned to a worker). One intra-run gotcha: TestWhatsAppTemplates.test_admin_patch_blocked_by_default was observed flaky under parallel settings because another class could toggle admin_can_edit_templates — the suite still passes it reliably because loadscope keeps the toggle inside the same class, but if any new test toggles that flag globally the order matters. Driver 'budi' is seeded with 2 live trips, use HRG-261003-00x. Public base URL: https://hrgo-roles.preview.emergentagent.com.",
+  "rca_of_issue": "PATCH /vehicles and PATCH /routes return 422 because the endpoints reuse the create-time Pydantic model (VehicleIn / RouteIn) which marks name/plate/origin/destination as required. FastAPI validates the request body against this model, so a partial PATCH {status:'MAINTENANCE'} or {base_price:150000} fails validation. Fix: define VehicleUpdateIn / RouteUpdateIn with all Optional fields, then update_vehicle/update_route should set only keys where v is not None (identical pattern already used by update_user and update_template)."
+}

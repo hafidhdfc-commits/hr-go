@@ -1,0 +1,154 @@
+{
+  "app_name": "HR-Go",
+  "personality": "1 iOS-Native Clean layout fused with 6 Glass / Luxe cinematic surfaces",
+  "personality_one_liner": "A premium, cinematic command center that elevates fleet operations to the standard of private executive aviation.",
+  "color": {
+    "surface": "#FFFFFF",
+    "onSurface": "#061B3A",
+    "surfaceSecondary": "#F5F7FA",
+    "onSurfaceSecondary": "#061B3A",
+    "surfaceTertiary": "#D9DEE5",
+    "onSurfaceTertiary": "#061B3A",
+    "surfaceInverse": "#061B3A",
+    "onSurfaceInverse": "#FFFFFF",
+    "brand": "#061B3A",
+    "brandPrimary": "#061B3A",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#8D98A6",
+    "onBrandSecondary": "#FFFFFF",
+    "brandTertiary": "#D9DEE5",
+    "onBrandTertiary": "#061B3A",
+    "success": "#1B5E20",
+    "onSuccess": "#FFFFFF",
+    "warning": "#B77B00",
+    "onWarning": "#FFFFFF",
+    "error": "#B71C1C",
+    "onError": "#FFFFFF",
+    "info": "#2E475D",
+    "onInfo": "#FFFFFF",
+    "border": "#D9DEE5",
+    "borderStrong": "#8D98A6",
+    "divider": "#E8EAF0",
+    "muted": "#8D98A6",
+    "onBrand": "#FFFFFF"
+  },
+  "typography": {
+    "displayFontFamily": "Montserrat",
+    "textFontFamily": "Inter",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Maintain generous aviation-style padding. Let data breathe. Use md for inner component spacing and lg/xl for section separation.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": "1",
+  "navigation": "bottom_tabs",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": true,
+    "do's": [
+      "Use heavy glassmorphism for bottom tab bars and sticky headers over scrolling content.",
+      "Apply translucent glass overlays on cinematic hero/profile images (like a private jet tarmac) to ensure text readability.",
+      "Use glass for modal scrims and bottom sheet drag handles."
+    ],
+    "dont's": [
+      "Do not apply glass to dense metric cards or data table rows; they need solid contrast for legibility.",
+      "Never blur body content or form inputs.",
+      "Avoid stacking more than 2 blurred surfaces on a single screen."
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "haptics": {
+    "events": {
+      "button_press": "light",
+      "tab_change": "light",
+      "trip_status_change": "medium",
+      "invoice_sent": "success",
+      "whatsapp_launch": "light"
+    }
+  },
+  "screens": [
+    {
+      "name": "Owner Dashboard",
+      "purpose": "A cinematic command center providing total business oversight via dense metric cards and quick action access.",
+      "states": {
+        "loading": "Skeleton loaders for metric cards with a subtle shimmer effect.",
+        "empty": "No data yet. 'Your fleet command center awaits.' with a 'Configure Fleet' CTA.",
+        "error": "Failed to load metrics. 'Unable to retrieve operations data.' with a retry button."
+      },
+      "layout": "Header features a cinematic aviation image with a heavy gradient-to-navy scrim, greeting the Owner. Below the header, use a multi-column grid of metric cards (Revenue, Trips, Fleet Status) on surfaceSecondary. Cards should have strict 1 iOS-Native Clean padding with right-aligned trend icons. Group sections (Business, Operations, Customers) with clear Montserrat headings."
+    },
+    {
+      "name": "Admin Operational Dashboard",
+      "purpose": "A high-efficiency back-office view for dispatching, vehicle assignment, and invoicing.",
+      "states": {
+        "loading": "Centered spinner over a muted list layout.",
+        "empty": "No active trips. Abstract illustration with 'No active operations to manage.'",
+        "error": "Failed to load operations. Retry button displayed prominently."
+      },
+      "layout": "Top section features quick-filter pills (Pending, Active, Completed). Below is a single-column scrollable list of Trip Cards. Each card displays route, customer, and driver assignment status. Actionable CTA ('Assign Driver', 'Send Invoice') is placed prominently on the card. Sticky bottom primary CTA for 'Create New Trip'."
+    },
+    {
+      "name": "Driver Trip Detail",
+      "purpose": "A minimal, action-first interface optimized for quick interactions and status updates while in the field.",
+      "states": {
+        "loading": "Skeleton layout mapping the trip card structure.",
+        "empty": "No assigned trips. 'You are off duty. Enjoy your rest.'",
+        "error": "Failed to sync trip details. Retry button."
+      },
+      "layout": "Large, tactile touch targets. The top half displays route context and the Customer Contact Card (surfaceSecondary) featuring prominent 'Call' and 'WhatsApp' icon buttons (tinted in success green for WhatsApp recognition). The bottom half contains large, full-width status workflow buttons (e.g., 'Start Trip', 'Arrived', 'Complete') sticky at the bottom for easy thumb access."
+    }
+  ],
+  "images": {
+    "splash_background": {
+      "url": "https://images.unsplash.com/photo-1619659085985-f51a00f0160a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NjV8MHwxfHNlYXJjaHwxfHxwcml2YXRlJTIwamV0JTIwdGVybWluYWwlMjBjaW5lbWF0aWN8ZW58MHx8fHwxNzkxMDM4OTI1fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Cinematic shot of a private jet on the tarmac at sunset, representing premium aviation."
+    },
+    "vehicle_placeholder": {
+      "url": "https://images.unsplash.com/photo-1750210505997-ed85e9f8cb12?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzN8MHwxfHNlYXJjaHwxfHxibGFjayUyMGx1eHVyeSUyMGV4ZWN1dGl2ZSUyMHNwcmludGVyJTIwdmFufGVufDB8fHx8MTc5MTAzODkyNXww&ixlib=rb-4.1.0&q=85",
+      "alt": "Interior of a black luxury executive sprinter van."
+    },
+    "owner_hero_background": {
+      "url": "https://images.unsplash.com/photo-1531591022136-eb8b0da1e6d0?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njd8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMG5hdnklMjBibHVlJTIwYXJjaGl0ZWN0dXJlfGVufDB8fHx8MTc5MTAzODkyNXww&ixlib=rb-4.1.0&q=85",
+      "alt": "Abstract metallic blue architecture, representing modern, structured reliability."
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly adhere to the selected fonts: Montserrat for all headings/display elements, and Inter for body text/labels. Ensure 500 max weight rule is maintained; use size for hierarchy instead of heavy bold weights.",
+    "The client explicitly requested Navy (#061B3A) as the primary brand color, which overrides the standard rule against blue. Apply this Navy to primary buttons, interactive elements, and text on white backgrounds.",
+    "Implement the 'gradient-to-dark scrim pattern' over any hero or profile images (e.g., owner_hero_background) to guarantee that Montserrat overlay text is perfectly readable. The scrim should fade to #061B3A (Navy) at the bottom.",
+    "Role Separation: Use a distinct bottom tab bar configuration based on the user's role. Owner gets a dense analytics tab structure, Admin gets Operations/Invoicing tabs, and Driver gets a minimal My Trips tab.",
+    "For the Driver's Contact Card, ensure the Call and WhatsApp buttons are oversized (minimum 44x44pt) with clear icon indicators (Phosphor icons). Even though the theme is Navy, allow the WhatsApp button to lightly tint or utilize the 'success' (#1B5E20) color to signify standard app behavior.",
+    "Avoid standard shadow heavy cards. Use surfaceSecondary (#F5F7FA) for cards on the white surface, with a 1pt subtle border (#D9DEE5) to maintain the iOS-Native Clean feel with premium execution.",
+    "When rendering invoices, use a high-contrast, structured list (almost Brutalist in its alignment) to ensure financial legibility."
+  ]
+}
