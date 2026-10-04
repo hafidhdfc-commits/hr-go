@@ -7,6 +7,8 @@ import { Select, Option } from "@/src/components/select";
 import { useToast } from "@/src/components/toast";
 import { api, useGet, useInvalidate } from "@/src/hooks";
 import { ApiError } from "@/src/api";
+import { confirmDelete } from "@/src/utils/confirm";
+import { useAuth } from "@/src/auth";
 import { spacing, makeStyles } from "@/src/theme";
 import { rupiah, fmtDateTime, tripStatusKind, tripStatusLabel } from "@/src/format";
 
@@ -29,6 +31,8 @@ export default function TripDetail() {
   const router = useRouter();
   const toast = useToast();
   const invalidate = useInvalidate();
+  const { user } = useAuth();
+  const isOwner = user?.role === "OWNER";
   const { data: trip, isLoading, refetch } = useGet<any>(["trip", params.id], `/trips/${params.id}`);
   const { data: drivers } = useGet<Driver[]>(["drivers"], "/drivers");
   const { data: vehicles } = useGet<Vehicle[]>(["vehicles"], "/vehicles");
@@ -76,6 +80,19 @@ export default function TripDetail() {
       await api.post(`/trips/${params.id}/cancel`, { status: "CANCELLED", reason });
       toast.show("Trip cancelled", "success");
       refresh();
+      router.back();
+    } catch (e) {
+      toast.show(e instanceof ApiError ? e.message : "Failed", "error");
+    }
+  };
+
+  const onDelete = async () => {
+    const ok = await confirmDelete(`Permanently delete trip ${trip.trip_number}? This cannot be undone.`);
+    if (!ok) return;
+    try {
+      await api.del(`/trips/${params.id}`);
+      toast.show("Trip deleted", "success");
+      invalidate([["trips"], ["owner-dashboard"], ["admin-dashboard"]]);
       router.back();
     } catch (e) {
       toast.show(e instanceof ApiError ? e.message : "Failed", "error");
@@ -160,6 +177,16 @@ export default function TripDetail() {
           <View style={{ gap: spacing.sm }}>
             <Button title="Cancel This Trip" variant="danger" small onPress={cancel} testID="cancel-trip" />
           </View>
+        </Card>
+      ) : null}
+
+      {isOwner ? (
+        <Card style={{ marginTop: spacing.lg }}>
+          <SectionHeader title="Danger Zone" />
+          <AppText variant="caption" style={{ marginBottom: spacing.sm }}>
+            Deleting removes this trip permanently. Owner only.
+          </AppText>
+          <Button title="Delete Trip" variant="danger" small onPress={onDelete} testID="delete-trip" />
         </Card>
       ) : null}
     </StackScreen>

@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { View, Pressable, Modal, ScrollView } from "react-native";
-import { Plus, X } from "phosphor-react-native";
+import { Plus, X, Trash } from "phosphor-react-native";
 import { StackScreen } from "@/src/components/stack-screen";
 import { AppText, Card, Badge, Button, Field, Loading, EmptyState } from "@/src/components/ui";
 import { Select } from "@/src/components/select";
 import { useToast } from "@/src/components/toast";
 import { api, useGet, useInvalidate } from "@/src/hooks";
 import { ApiError } from "@/src/api";
+import { confirmDelete } from "@/src/utils/confirm";
+import { useAuth } from "@/src/auth";
 import { spacing, radius, makeStyles, useTheme } from "@/src/theme";
 
 type Vehicle = { id: string; name: string; plate: string; type?: string; capacity?: number; status: string };
@@ -23,6 +25,8 @@ export default function Vehicles() {
   const { colors } = useTheme();
   const toast = useToast();
   const invalidate = useInvalidate();
+  const { user } = useAuth();
+  const isOwner = user?.role === "OWNER";
   const { data, isLoading } = useGet<Vehicle[]>(["vehicles"], "/vehicles");
   const [open, setOpen] = useState(false);
   const [f, setF] = useState<any>({ status: "AVAILABLE", type: "Van", capacity: "6" });
@@ -39,6 +43,18 @@ export default function Vehicles() {
     setEditId(null);
     setF({ status: "AVAILABLE", type: "Van", capacity: "6" });
     setOpen(true);
+  };
+
+  const onDelete = async (v: Vehicle) => {
+    const ok = await confirmDelete(`Delete vehicle "${v.name}" (${v.plate})? This cannot be undone.`);
+    if (!ok) return;
+    try {
+      await api.del(`/vehicles/${v.id}`);
+      invalidate([["vehicles"]]);
+      toast.show("Vehicle deleted", "success");
+    } catch (e) {
+      toast.show(e instanceof ApiError ? e.message : "Failed", "error");
+    }
   };
 
   const save = async () => {
@@ -81,6 +97,11 @@ export default function Vehicles() {
                 </AppText>
               </View>
               <Badge label={v.status.replace("_", " ")} kind={statusKind(v.status) as any} />
+              {isOwner ? (
+                <Pressable testID={`delete-vehicle-${v.id}`} hitSlop={10} style={styles.trash} onPress={() => onDelete(v)}>
+                  <Trash size={18} color={colors.error} weight="bold" />
+                </Pressable>
+              ) : null}
             </View>
           </Card>
         ))
@@ -114,6 +135,7 @@ const useStyles = makeStyles((colors) => ({
   add: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center" },
   card: { marginBottom: spacing.sm },
   row: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  trash: { padding: spacing.xs },
   backdrop: { flex: 1, backgroundColor: "rgba(6,27,58,0.5)", justifyContent: "flex-end" },
   sheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.lg, paddingBottom: spacing["2xl"], maxHeight: "85%" },
   head: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.md },

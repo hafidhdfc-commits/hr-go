@@ -569,6 +569,22 @@ async def set_user_status(uid: str, body: StatusIn, owner: dict = Depends(requir
     return public_user(u)
 
 
+@api.delete("/users/{uid}")
+async def delete_user(uid: str, owner: dict = Depends(require("OWNER"))):
+    u = await db.users.find_one({"id": uid})
+    if not u:
+        raise HTTPException(status_code=404, detail="User not found")
+    if u["role"] == "OWNER":
+        raise HTTPException(status_code=403, detail="OWNER accounts cannot be deleted")
+    # cascade: remove driver-owned vehicles and unassign this user from any trips
+    await db.vehicles.delete_many({"owned_by_driver_id": uid})
+    await db.trips.update_many({"driver_id": uid}, {"$set": {"driver_id": None}})
+    await db.users.delete_one({"id": uid})
+    await audit(owner, f"Deleted {u['role']} account", category="USER", entity="user", entity_id=uid,
+                old_value=u.get("full_name"), sensitive=True)
+    return {"ok": True}
+
+
 @api.get("/drivers")
 async def list_drivers(user: dict = Depends(require("OWNER", "ADMIN"))):
     rows = await db.users.find({"role": "DRIVER"}).sort("full_name", 1).to_list(500)
@@ -750,6 +766,18 @@ async def update_vehicle(vid: str, body: VehicleUpdateIn, user: dict = Depends(r
     return clean(v)
 
 
+@api.delete("/vehicles/{vid}")
+async def delete_vehicle(vid: str, owner: dict = Depends(require("OWNER"))):
+    v = await db.vehicles.find_one({"id": vid})
+    if not v:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+    await db.trips.update_many({"vehicle_id": vid}, {"$set": {"vehicle_id": None}})
+    await db.vehicles.delete_one({"id": vid})
+    await audit(owner, "Deleted vehicle", entity="vehicle", entity_id=vid,
+                old_value=f"{v.get('name')} {v.get('plate')}")
+    return {"ok": True}
+
+
 # ---- ROUTES ----
 @api.get("/routes")
 async def list_routes(user: dict = Depends(require("OWNER", "ADMIN"))):
@@ -778,6 +806,16 @@ async def update_route(rid: str, body: RouteUpdateIn, user: dict = Depends(requi
     await audit(user, "Edited route", entity="route", entity_id=rid, new_value=updates.get("name") or r.get("name"))
     r = await db.routes.find_one({"id": rid})
     return clean(r)
+
+
+@api.delete("/routes/{rid}")
+async def delete_route(rid: str, owner: dict = Depends(require("OWNER"))):
+    r = await db.routes.find_one({"id": rid})
+    if not r:
+        raise HTTPException(status_code=404, detail="Route not found")
+    await db.routes.delete_one({"id": rid})
+    await audit(owner, "Deleted route", entity="route", entity_id=rid, old_value=r.get("name"))
+    return {"ok": True}
 
 
 # ---- TRIPS ----
@@ -923,6 +961,19 @@ async def change_trip_status(tid: str, body: TripStatusIn, user: dict = Depends(
                 trip_number=t.get("trip_number"), customer=t.get("customer_name"))
     t = await db.trips.find_one({"id": tid})
     return await enrich_trip(t)
+
+
+@api.delete("/trips/{tid}")
+async def delete_trip(tid: str, owner: dict = Depends(require("OWNER"))):
+    t = await db.trips.find_one({"id": tid})
+    if not t:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    if t.get("vehicle_id"):
+        await db.vehicles.update_one({"id": t["vehicle_id"]}, {"$set": {"status": "AVAILABLE"}})
+    await db.trips.delete_one({"id": tid})
+    await audit(owner, "Deleted trip", entity="trip", entity_id=tid, trip_number=t.get("trip_number"),
+                customer=t.get("customer_name"), old_value=t.get("trip_number"), sensitive=True)
+    return {"ok": True}
 
 
 # ---- DRIVER ENDPOINTS ----

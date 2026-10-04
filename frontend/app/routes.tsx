@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { View, Pressable, Modal, ScrollView } from "react-native";
-import { Plus, X } from "phosphor-react-native";
+import { Plus, X, Trash } from "phosphor-react-native";
 import { StackScreen } from "@/src/components/stack-screen";
 import { AppText, Card, Button, Field, Loading, EmptyState } from "@/src/components/ui";
 import { useToast } from "@/src/components/toast";
 import { api, useGet, useInvalidate } from "@/src/hooks";
 import { ApiError } from "@/src/api";
+import { confirmDelete } from "@/src/utils/confirm";
+import { useAuth } from "@/src/auth";
 import { spacing, radius, makeStyles, useTheme } from "@/src/theme";
 import { rupiah } from "@/src/format";
 
@@ -16,6 +18,8 @@ export default function Routes() {
   const { colors } = useTheme();
   const toast = useToast();
   const invalidate = useInvalidate();
+  const { user } = useAuth();
+  const isOwner = user?.role === "OWNER";
   const { data, isLoading } = useGet<Route[]>(["routes"], "/routes");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -33,8 +37,19 @@ export default function Routes() {
     setOpen(true);
   };
 
-  const save = async () => {
-    if (!f.name || !f.origin || !f.destination) return toast.show("All fields required", "error");
+  const onDelete = async (r: Route) => {
+    const ok = await confirmDelete(`Delete route "${r.name}"? This cannot be undone.`);
+    if (!ok) return;
+    try {
+      await api.del(`/routes/${r.id}`);
+      invalidate([["routes"]]);
+      toast.show("Route deleted", "success");
+    } catch (e) {
+      toast.show(e instanceof ApiError ? e.message : "Failed", "error");
+    }
+  };
+
+  const save = async () => {    if (!f.name || !f.origin || !f.destination) return toast.show("All fields required", "error");
     const body = { name: f.name, origin: f.origin, destination: f.destination, base_price: parseInt(f.base_price || "0", 10) };
     try {
       if (editId) await api.patch(`/routes/${editId}`, body);
@@ -75,6 +90,11 @@ export default function Routes() {
               <AppText variant="bodyMedium" color="success">
                 {rupiah(r.base_price)}
               </AppText>
+              {isOwner ? (
+                <Pressable testID={`delete-route-${r.id}`} hitSlop={10} style={styles.trash} onPress={() => onDelete(r)}>
+                  <Trash size={18} color={colors.error} weight="bold" />
+                </Pressable>
+              ) : null}
             </View>
           </Card>
         ))
@@ -107,6 +127,7 @@ const useStyles = makeStyles((colors) => ({
   add: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center" },
   card: { marginBottom: spacing.sm },
   row: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  trash: { padding: spacing.xs },
   backdrop: { flex: 1, backgroundColor: "rgba(6,27,58,0.5)", justifyContent: "flex-end" },
   sheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.lg, paddingBottom: spacing["2xl"], maxHeight: "85%" },
   head: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.md },

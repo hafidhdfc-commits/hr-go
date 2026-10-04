@@ -2,12 +2,15 @@ import { View, FlatList, Pressable, RefreshControl } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Plus, Phone, EnvelopeSimple } from "phosphor-react-native";
+import { Plus, Phone, EnvelopeSimple, Trash } from "phosphor-react-native";
 import { AppText, Badge, Loading, EmptyState, ChipRow } from "@/src/components/ui";
 import { makeStyles, spacing, radius, useTheme } from "@/src/theme";
-import { useGet } from "@/src/hooks";
+import { useGet, api, useInvalidate } from "@/src/hooks";
+import { ApiError } from "@/src/api";
+import { useToast } from "@/src/components/toast";
+import { confirmDelete } from "@/src/utils/confirm";
 import { fmtDate, userStatusKind, initials } from "@/src/format";
-import type { User } from "@/src/auth";
+import { useAuth, type User } from "@/src/auth";
 
 const ROLE_FILTERS = [
   { key: "ALL", label: "All" },
@@ -21,10 +24,26 @@ export default function UserManagement() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const toast = useToast();
+  const invalidate = useInvalidate();
+  const { user: me } = useAuth();
+  const isOwner = me?.role === "OWNER";
   const [role, setRole] = useState("ALL");
   const { data, isLoading, refetch, isRefetching } = useGet<User[]>(["users"], "/users");
 
   const filtered = (data || []).filter((u) => role === "ALL" || u.role === role);
+
+  const onDelete = async (u: User) => {
+    const ok = await confirmDelete(`Delete ${u.role.toLowerCase()} "${u.full_name}"? This permanently removes the account and cannot be undone.`);
+    if (!ok) return;
+    try {
+      await api.del(`/users/${u.id}`);
+      invalidate([["users"], ["drivers"], ["owner-dashboard"]]);
+      toast.show("User deleted", "success");
+    } catch (e) {
+      toast.show(e instanceof ApiError ? e.message : "Failed to delete", "error");
+    }
+  };
 
   return (
     <View style={styles.root}>
@@ -79,6 +98,11 @@ export default function UserManagement() {
                   Last login: {fmtDate(item.last_login)} · Created: {fmtDate(item.created_at)}
                 </AppText>
               </View>
+              {isOwner && item.role !== "OWNER" ? (
+                <Pressable testID={`delete-user-${item.id}`} hitSlop={10} style={styles.trash} onPress={() => onDelete(item)}>
+                  <Trash size={18} color={colors.error} weight="bold" />
+                </Pressable>
+              ) : null}
             </Pressable>
           )}
           ListEmptyComponent={<EmptyState title="No users" subtitle="Create admin or driver accounts to get started." />}
@@ -129,6 +153,7 @@ const useStyles = makeStyles((colors) => ({
   metaRow: { gap: 2, marginTop: 4 },
   meta: { flexDirection: "row", alignItems: "center", gap: 6 },
   sub: { marginTop: 4 },
+  trash: { padding: spacing.xs, alignSelf: "flex-start" },
   fabRow: { position: "absolute", right: spacing.xl, bottom: spacing.lg, flexDirection: "row", gap: spacing.sm },
   pill: {
     flexDirection: "row",
