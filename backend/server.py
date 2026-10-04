@@ -222,6 +222,12 @@ class CreateUserIn(BaseModel):
     license_expiry: Optional[str] = None
     emergency_contact: Optional[str] = None
     assigned_vehicle_id: Optional[str] = None
+    # Optional: register the driver's own car (owner-operator)
+    register_own_car: bool = False
+    car_name: Optional[str] = None
+    car_plate: Optional[str] = None
+    car_type: Optional[str] = None
+    car_capacity: Optional[int] = None
 
 
 class UpdateUserIn(BaseModel):
@@ -265,6 +271,9 @@ class VehicleIn(BaseModel):
     type: Optional[str] = "Van"
     capacity: Optional[int] = 6
     status: str = "AVAILABLE"  # AVAILABLE | ON_TRIP | MAINTENANCE
+    ownership: Optional[str] = "FLEET"  # FLEET | DRIVER_OWNED
+    owned_by_driver_id: Optional[str] = None
+    owner_name: Optional[str] = None
 
 
 class VehicleUpdateIn(BaseModel):
@@ -474,6 +483,25 @@ async def create_user(body: CreateUserIn, owner: dict = Depends(require("OWNER")
         "deleted_at": None,
     }
     await db.users.insert_one(doc)
+    # Owner-operator: register the driver's own car and assign it permanently
+    if body.role == "DRIVER" and body.register_own_car and body.car_plate:
+        vehicle = {
+            "id": new_id(),
+            "name": body.car_name or f"{body.full_name}'s car",
+            "plate": body.car_plate,
+            "type": body.car_type or "Private Car",
+            "capacity": body.car_capacity or 4,
+            "status": "AVAILABLE",
+            "ownership": "DRIVER_OWNED",
+            "owned_by_driver_id": doc["id"],
+            "owner_name": body.full_name,
+            "created_at": now_utc(),
+        }
+        await db.vehicles.insert_one(vehicle)
+        await db.users.update_one({"id": doc["id"]}, {"$set": {"assigned_vehicle_id": vehicle["id"]}})
+        doc["assigned_vehicle_id"] = vehicle["id"]
+        await audit(owner, "Registered driver-owned car", entity="vehicle", entity_id=vehicle["id"],
+                    new_value=f"{vehicle['name']} {vehicle['plate']}")
     await audit(owner, f"Created {body.role}", category="USER", entity="user", entity_id=doc["id"],
                 new_value=body.full_name)
     return public_user(doc)
